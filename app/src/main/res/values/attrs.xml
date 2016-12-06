@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TransformationContentView">
+        <attr name="image" format="reference"/>
+        <attr name="transformation" format="enum">
+            <enum name="none" value="0"/>
+            <enum name="invert_green_and_blue" value="1"/>
+            <enum name="cut_image" value="2"/>
+            <enum name="put_gradient" value="3"/>
+        </attr>
+    </declare-styleable>
+</resources>
