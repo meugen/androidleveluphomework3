@@ -9,13 +9,14 @@
     tools:context="ua.meugen.android.levelup.homework3.MainActivity"
     android:orientation="vertical">
 
-    <ua.meugen.android.levelup.homework3.TransformationContentView
+    <ua.meugen.android.levelup.homework3.views.TransformationContentView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1.0"
         android:id="@+id/content"
         app:image="@drawable/image02"
-        app:transformation="none"/>
+        app:transformation="none"
+        android:background="@android:color/holo_red_dark"/>
 
     <LinearLayout
         android:layout_width="match_parent"
