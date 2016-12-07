@@ -89,9 +89,9 @@ public class TransformationContentView extends View {
             final float scale = Math.min((float) width / bitmap.getWidth(),
                     (float) height / bitmap.getHeight());
             final float scaledWidth = bitmap.getWidth() * scale;
-            final float scaleHeight = bitmap.getHeight() * scale;
+            final float scaledHeight = bitmap.getHeight() * scale;
 
-            final float verticalPadding = (height - scaleHeight) / 2;
+            final float verticalPadding = (height - scaledHeight) / 2;
             final float horizontalPadding = (width - scaledWidth) / 2;
             this.bitmapRect.set(horizontalPadding, verticalPadding,
                     width - horizontalPadding, height - verticalPadding);
