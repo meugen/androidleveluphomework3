@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -33,6 +35,7 @@ public class TransformationContentView extends View {
 
     private Drawable image;
     private int transformation = NONE;
+    private PaintSetupHelper paintSetupHelper;
 
     public TransformationContentView(final Context context) {
         super(context);
@@ -53,6 +56,16 @@ public class TransformationContentView extends View {
         this.image = array.getDrawable(R.styleable.TransformationContentView_image);
         this.transformation = array.getInt(R.styleable.TransformationContentView_transformation, NONE);
         array.recycle();
+
+        this.initPaintSetupHelper();
+    }
+
+    private void initPaintSetupHelper() {
+        if (this.transformation == INVERT_GREEN_AND_BLUE) {
+            this.paintSetupHelper = new InvertGreenAndBluePaintSetupHelper();
+        } else {
+            this.paintSetupHelper = new NonePaintSetupHelper();
+        }
     }
 
     public Drawable getImage() {
@@ -70,6 +83,7 @@ public class TransformationContentView extends View {
 
     public void setTransformation(final int transformation) {
         this.transformation = transformation;
+        this.initPaintSetupHelper();
         invalidate();
     }
 
@@ -104,9 +118,39 @@ public class TransformationContentView extends View {
         if (this.image == null) {
             return;
         }
-        final Bitmap bitmap = ((BitmapDrawable) this.image).getBitmap();
+        this.paintSetupHelper.setupPaint(this.paint);
 
+        final Bitmap bitmap = ((BitmapDrawable) this.image).getBitmap();
         canvas.drawBitmap(bitmap, null, bitmapRect, this.paint);
-        Log.i(TAG, "Bitmap width: " + bitmap.getWidth() + " and height: " + bitmap.getHeight());
+    }
+}
+
+interface PaintSetupHelper {
+
+    void setupPaint(Paint paint);
+}
+
+class NonePaintSetupHelper implements PaintSetupHelper {
+
+    @Override
+    public void setupPaint(final Paint paint) {
+        paint.setColorFilter(null);
+    }
+}
+
+class InvertGreenAndBluePaintSetupHelper implements PaintSetupHelper {
+
+    private static final float[] COLOR_MATRIX_ARRAY = new float[] {
+            1,  0,  0, 0,   0, // the same red channel
+            0, -1,  0, 0, 255, // invert green channel
+            0,  0, -1, 0, 255, // invert blue channel
+            0,  0,  0, 1,   0  // the same alpha channel
+    };
+
+    private final ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(COLOR_MATRIX_ARRAY);
+
+    @Override
+    public void setupPaint(final Paint paint) {
+        paint.setColorFilter(colorFilter);
     }
 }
