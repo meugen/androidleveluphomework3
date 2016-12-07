@@ -4,15 +4,14 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Rect;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 
 import ua.meugen.android.levelup.homework3.R;
@@ -35,7 +34,7 @@ public class TransformationContentView extends View {
 
     private Drawable image;
     private int transformation = NONE;
-    private PaintSetupHelper paintSetupHelper;
+    private DrawSetupHelper drawSetupHelper;
 
     public TransformationContentView(final Context context) {
         super(context);
@@ -62,9 +61,11 @@ public class TransformationContentView extends View {
 
     private void initPaintSetupHelper() {
         if (this.transformation == INVERT_GREEN_AND_BLUE) {
-            this.paintSetupHelper = new InvertGreenAndBluePaintSetupHelper();
+            this.drawSetupHelper = new InvertGreenAndBlueDrawSetupHelper();
+        } else if (this.transformation == CUT_IMAGE) {
+            this.drawSetupHelper = new CutImageDrawSetupHelper();
         } else {
-            this.paintSetupHelper = new NonePaintSetupHelper();
+            this.drawSetupHelper = new NoneDrawSetupHelper();
         }
     }
 
@@ -118,27 +119,36 @@ public class TransformationContentView extends View {
         if (this.image == null) {
             return;
         }
-        this.paintSetupHelper.setupPaint(this.paint);
+        this.drawSetupHelper.setupPaint(this.paint);
+
+        canvas.save();
+        this.drawSetupHelper.setupCanvas(canvas, this.bitmapRect);
 
         final Bitmap bitmap = ((BitmapDrawable) this.image).getBitmap();
-        canvas.drawBitmap(bitmap, null, bitmapRect, this.paint);
+        canvas.drawBitmap(bitmap, null, this.bitmapRect, this.paint);
+        canvas.restore();
     }
 }
 
-interface PaintSetupHelper {
+interface DrawSetupHelper {
 
     void setupPaint(Paint paint);
+
+    void setupCanvas(Canvas canvas, RectF rect);
 }
 
-class NonePaintSetupHelper implements PaintSetupHelper {
+class NoneDrawSetupHelper implements DrawSetupHelper {
 
     @Override
     public void setupPaint(final Paint paint) {
         paint.setColorFilter(null);
     }
+
+    @Override
+    public void setupCanvas(final Canvas canvas, final RectF rect) {}
 }
 
-class InvertGreenAndBluePaintSetupHelper implements PaintSetupHelper {
+class InvertGreenAndBlueDrawSetupHelper implements DrawSetupHelper {
 
     private static final float[] COLOR_MATRIX_ARRAY = new float[] {
             1,  0,  0, 0,   0, // the same red channel
@@ -152,5 +162,34 @@ class InvertGreenAndBluePaintSetupHelper implements PaintSetupHelper {
     @Override
     public void setupPaint(final Paint paint) {
         paint.setColorFilter(colorFilter);
+    }
+
+    @Override
+    public void setupCanvas(final Canvas canvas, final RectF rect) {}
+}
+
+class CutImageDrawSetupHelper implements DrawSetupHelper {
+
+    private final Matrix matrix = new Matrix();
+    private final Path path = new Path();
+    //private final RectF pathRect = new RectF();
+
+    @Override
+    public void setupPaint(final Paint paint) {
+        paint.setColorFilter(null);
+    }
+
+    @Override
+    public void setupCanvas(final Canvas canvas, final RectF rect) {
+        this.matrix.setRotate(40f, rect.centerX(), rect.centerY());
+
+        this.path.reset();
+        this.path.moveTo(rect.centerX(), rect.top);
+        this.path.rLineTo(rect.width() / 2, rect.height() * 2 / 3);
+        this.path.rLineTo(-rect.width(), 0);
+        this.path.lineTo(rect.centerX(), rect.top);
+        this.path.transform(this.matrix);
+
+        canvas.clipPath(this.path);
     }
 }
