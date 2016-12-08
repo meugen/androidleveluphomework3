@@ -4,13 +4,18 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -34,10 +39,11 @@ public class TransformationContentView extends View {
 
     private Drawable image;
     private int transformation = NONE;
-    private DrawSetupHelper drawSetupHelper;
+    private DrawHelper drawHelper;
 
     public TransformationContentView(final Context context) {
         super(context);
+        initPaintSetupHelper();
     }
 
     public TransformationContentView(final Context context, final AttributeSet attrs) {
@@ -61,11 +67,13 @@ public class TransformationContentView extends View {
 
     private void initPaintSetupHelper() {
         if (this.transformation == INVERT_GREEN_AND_BLUE) {
-            this.drawSetupHelper = new InvertGreenAndBlueDrawSetupHelper();
+            this.drawHelper = new InvertGreenAndBlueDrawHelper();
         } else if (this.transformation == CUT_IMAGE) {
-            this.drawSetupHelper = new CutImageDrawSetupHelper();
+            this.drawHelper = new CutImageDrawHelper();
+        } else if (this.transformation == PUT_GRADIENT) {
+            this.drawHelper = new PutGradientDrawHelper();
         } else {
-            this.drawSetupHelper = new NoneDrawSetupHelper();
+            this.drawHelper = new DrawHelper();
         }
     }
 
@@ -119,36 +127,21 @@ public class TransformationContentView extends View {
         if (this.image == null) {
             return;
         }
-        this.drawSetupHelper.setupPaint(this.paint);
-
-        canvas.save();
-        this.drawSetupHelper.setupCanvas(canvas, this.bitmapRect);
-
         final Bitmap bitmap = ((BitmapDrawable) this.image).getBitmap();
-        canvas.drawBitmap(bitmap, null, this.bitmapRect, this.paint);
-        canvas.restore();
+        this.drawHelper.draw(canvas, bitmap, this.bitmapRect);
     }
 }
 
-interface DrawSetupHelper {
+class DrawHelper {
 
-    void setupPaint(Paint paint);
+    protected final Paint paint = new Paint();
 
-    void setupCanvas(Canvas canvas, RectF rect);
-}
-
-class NoneDrawSetupHelper implements DrawSetupHelper {
-
-    @Override
-    public void setupPaint(final Paint paint) {
-        paint.setColorFilter(null);
+    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
+        canvas.drawBitmap(bitmap, null, rect, this.paint);
     }
-
-    @Override
-    public void setupCanvas(final Canvas canvas, final RectF rect) {}
 }
 
-class InvertGreenAndBlueDrawSetupHelper implements DrawSetupHelper {
+class InvertGreenAndBlueDrawHelper extends DrawHelper {
 
     private static final float[] COLOR_MATRIX_ARRAY = new float[] {
             1,  0,  0, 0,   0, // the same red channel
@@ -160,27 +153,20 @@ class InvertGreenAndBlueDrawSetupHelper implements DrawSetupHelper {
     private final ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(COLOR_MATRIX_ARRAY);
 
     @Override
-    public void setupPaint(final Paint paint) {
-        paint.setColorFilter(colorFilter);
+    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
+        this.paint.setColorFilter(colorFilter);
+        super.draw(canvas, bitmap, rect);
+        this.paint.setColorFilter(null);
     }
-
-    @Override
-    public void setupCanvas(final Canvas canvas, final RectF rect) {}
 }
 
-class CutImageDrawSetupHelper implements DrawSetupHelper {
+class CutImageDrawHelper extends DrawHelper {
 
     private final Matrix matrix = new Matrix();
     private final Path path = new Path();
-    //private final RectF pathRect = new RectF();
 
     @Override
-    public void setupPaint(final Paint paint) {
-        paint.setColorFilter(null);
-    }
-
-    @Override
-    public void setupCanvas(final Canvas canvas, final RectF rect) {
+    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
         this.matrix.setRotate(40f, rect.centerX(), rect.centerY());
 
         this.path.reset();
@@ -190,6 +176,36 @@ class CutImageDrawSetupHelper implements DrawSetupHelper {
         this.path.lineTo(rect.centerX(), rect.top);
         this.path.transform(this.matrix);
 
+        canvas.save();
         canvas.clipPath(this.path);
+        super.draw(canvas, bitmap, rect);
+        canvas.restore();
+    }
+}
+
+class PutGradientDrawHelper extends DrawHelper {
+
+    private final GradientDrawable gradient;
+    private final PorterDuffXfermode xfermode
+            = new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY);
+    private final Rect gradientRect = new Rect();
+
+    public PutGradientDrawHelper() {
+        this.gradient = new GradientDrawable(GradientDrawable.Orientation.BL_TR,
+                new int[] {Color.CYAN, Color.MAGENTA, Color.YELLOW, Color.TRANSPARENT });
+        this.gradient.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+    }
+
+    @Override
+    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
+        this.gradient.setGradientRadius(Math.max(rect.width(), rect.height()) / 2);
+        this.gradientRect.set(Math.round(rect.left), Math.round(rect.top),
+                Math.round(rect.right), Math.round(rect.bottom));
+        this.gradient.setBounds(this.gradientRect);
+
+        paint.setXfermode(this.xfermode);
+        super.draw(canvas, bitmap, rect);
+        this.gradient.draw(canvas);
+        paint.setXfermode(null);
     }
 }
