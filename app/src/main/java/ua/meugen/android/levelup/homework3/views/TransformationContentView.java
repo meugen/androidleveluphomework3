@@ -128,84 +128,82 @@ public class TransformationContentView extends View {
             return;
         }
         final Bitmap bitmap = ((BitmapDrawable) this.image).getBitmap();
-        this.drawHelper.draw(canvas, bitmap, this.bitmapRect);
-    }
-}
-
-class DrawHelper {
-
-    protected final Paint paint = new Paint();
-
-    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
-        canvas.drawBitmap(bitmap, null, rect, this.paint);
-    }
-}
-
-class InvertGreenAndBlueDrawHelper extends DrawHelper {
-
-    private static final float[] COLOR_MATRIX_ARRAY = new float[] {
-            1,  0,  0, 0,   0, // the same red channel
-            0, -1,  0, 0, 255, // invert green channel
-            0,  0, -1, 0, 255, // invert blue channel
-            0,  0,  0, 1,   0  // the same alpha channel
-    };
-
-    private final ColorMatrixColorFilter colorFilter = new ColorMatrixColorFilter(COLOR_MATRIX_ARRAY);
-
-    @Override
-    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
-        this.paint.setColorFilter(colorFilter);
-        super.draw(canvas, bitmap, rect);
-        this.paint.setColorFilter(null);
-    }
-}
-
-class CutImageDrawHelper extends DrawHelper {
-
-    private final Matrix matrix = new Matrix();
-    private final Path path = new Path();
-
-    @Override
-    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
-        this.matrix.setRotate(40f, rect.centerX(), rect.centerY());
-
-        this.path.reset();
-        this.path.moveTo(rect.centerX(), rect.top);
-        this.path.rLineTo(rect.width() / 2, rect.height() * 2 / 3);
-        this.path.rLineTo(-rect.width(), 0);
-        this.path.lineTo(rect.centerX(), rect.top);
-        this.path.transform(this.matrix);
-
-        canvas.save();
-        canvas.clipPath(this.path);
-        super.draw(canvas, bitmap, rect);
-        canvas.restore();
-    }
-}
-
-class PutGradientDrawHelper extends DrawHelper {
-
-    private final GradientDrawable gradient;
-    private final PorterDuffXfermode xfermode
-            = new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY);
-    private final Rect gradientRect = new Rect();
-
-    public PutGradientDrawHelper() {
-        this.gradient = new GradientDrawable(GradientDrawable.Orientation.BL_TR,
-                new int[] {Color.CYAN, Color.MAGENTA, Color.YELLOW, Color.TRANSPARENT });
-        this.gradient.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        this.drawHelper.draw(canvas, bitmap);
     }
 
-    @Override
-    public void draw(final Canvas canvas, final Bitmap bitmap, final RectF rect) {
-        this.gradient.setGradientRadius(Math.max(rect.width(), rect.height()) / 2);
-        this.gradientRect.set(Math.round(rect.left), Math.round(rect.top),
-                Math.round(rect.right), Math.round(rect.bottom));
-        this.gradient.setBounds(this.gradientRect);
+    private class DrawHelper {
 
-        paint.setXfermode(this.xfermode);
-        super.draw(canvas, bitmap, rect);
-        this.gradient.draw(canvas);
-        paint.setXfermode(null);
+        public void draw(final Canvas canvas, final Bitmap bitmap) {
+            canvas.drawBitmap(bitmap, null, bitmapRect, paint);
+        }
+    }
+
+    private class InvertGreenAndBlueDrawHelper extends DrawHelper {
+
+        private final float[] colorMatrixArray = new float[] {
+                1,  0,  0, 0,   0, // the same red channel
+                0, -1,  0, 0, 255, // invert green channel
+                0,  0, -1, 0, 255, // invert blue channel
+                0,  0,  0, 1,   0  // the same alpha channel
+        };
+        private final ColorMatrixColorFilter colorFilter
+                = new ColorMatrixColorFilter(colorMatrixArray);
+
+        @Override
+        public void draw(final Canvas canvas, final Bitmap bitmap) {
+            paint.setColorFilter(colorFilter);
+            super.draw(canvas, bitmap);
+            paint.setColorFilter(null);
+        }
+    }
+
+    private class CutImageDrawHelper extends DrawHelper {
+
+        private final Matrix matrix = new Matrix();
+        private final Path path = new Path();
+
+        @Override
+        public void draw(final Canvas canvas, final Bitmap bitmap) {
+            this.matrix.setRotate(40f, bitmapRect.centerX(), bitmapRect.centerY());
+
+            this.path.reset();
+            this.path.moveTo(bitmapRect.centerX(), bitmapRect.top);
+            this.path.rLineTo(bitmapRect.width() / 2, bitmapRect.height() * 2 / 3);
+            this.path.rLineTo(-bitmapRect.width(), 0);
+            this.path.lineTo(bitmapRect.centerX(), bitmapRect.top);
+            this.path.transform(this.matrix);
+
+            canvas.save();
+            canvas.clipPath(this.path);
+            super.draw(canvas, bitmap);
+            canvas.restore();
+        }
+    }
+
+    private class PutGradientDrawHelper extends DrawHelper {
+
+        private final GradientDrawable gradient;
+        private final PorterDuffXfermode xfermode
+                = new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY);
+        private final Rect gradientRect = new Rect();
+
+        public PutGradientDrawHelper() {
+            this.gradient = new GradientDrawable(GradientDrawable.Orientation.BL_TR,
+                    new int[] {Color.CYAN, Color.MAGENTA, Color.YELLOW, Color.TRANSPARENT });
+            this.gradient.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        }
+
+        @Override
+        public void draw(final Canvas canvas, final Bitmap bitmap) {
+            this.gradient.setGradientRadius(Math.max(bitmapRect.width(), bitmapRect.height()) / 2);
+            this.gradientRect.set(Math.round(bitmapRect.left), Math.round(bitmapRect.top),
+                    Math.round(bitmapRect.right), Math.round(bitmapRect.bottom));
+            this.gradient.setBounds(this.gradientRect);
+
+            paint.setXfermode(this.xfermode);
+            super.draw(canvas, bitmap);
+            this.gradient.draw(canvas);
+            paint.setXfermode(null);
+        }
     }
 }
